@@ -1,22 +1,28 @@
-from rest_framework import serializers
-from django.contrib.auth.models import User
-from .models import Profile, Post, Comment, LikePost, FollowersCount, Friendship, Chat, Message
+from rest_framework import serializers # type: ignore
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer # type: ignore
+from .models import FriendRequest, Post, Comment, LikePost, FollowersCount, Friendship, Chat, Message, User
 
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'password']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'password', 'profileimg', 'bio', 'location', 'birth_date', 'following', 'friends']
         extra_kwargs = {'password': {'write_only': True}}
 
-class ProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    following = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all())
-    followers = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all())
-    friends = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all())
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        return user
 
-    class Meta:
-        model = Profile
-        fields = ['id', 'user', 'id_user', 'bio', 'profileimg', 'location', 'birth_date', 'following', 'followers', 'friends']
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token['username'] = user.username
+        token['email'] = user.email
+        return token
 
 class PostSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
@@ -60,3 +66,11 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ['id', 'chat', 'sender', 'receiver', 'content', 'created_at', 'updated_at']
 
 
+class FriendRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FriendRequest
+        fields = ['id', 'sender', 'receiver', 'created_at', 'updated_at', 'status']
+
+    def create(self, validated_data):
+        friend_request = FriendRequest.objects.create(**validated_data)
+        return friend_request

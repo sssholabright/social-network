@@ -1,19 +1,22 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import ProfileViewSet, PostViewSet, CommentViewSet, LikePostViewSet, FollowersCountViewSet, FriendshipViewSet, ChatViewSet, MessageViewSet
+from rest_framework.routers import DefaultRouter # type: ignore
+from django.urls import path, include # type: ignore
+from rest_framework_simplejwt.views import TokenRefreshView # type: ignore
+from .views import FriendRequestViewSet, RegisterView, CustomTokenObtainPairView, UserView, PostViewSet, CommentViewSet, LikePostViewSet, FollowersCountViewSet, FriendshipViewSet, ChatViewSet, MessageViewSet
 
 router = DefaultRouter()
-router.register(r'profiles', ProfileViewSet)
-router.register(r'posts', PostViewSet)
-router.register(r'comments', CommentViewSet)
-router.register(r'likeposts', LikePostViewSet)
-router.register(r'followerscount', FollowersCountViewSet)
-router.register(r'friendship', FriendshipViewSet)
-router.register(r'chat', ChatViewSet)
-router.register(r'message', MessageViewSet)
+router.register(r'posts', PostViewSet, basename='posts')
+router.register(r'comments', CommentViewSet, basename='comments')
+router.register(r'likeposts', LikePostViewSet, basename='likeposts')
+router.register(r'followerscount', FollowersCountViewSet, basename='followerscount')
+router.register(r'friendships', FriendshipViewSet, basename='friendships')
+router.register(r'chats', ChatViewSet, basename='chats')
+router.register(r'messages', MessageViewSet, basename='messages')
+router.register(r'friendrequests', FriendRequestViewSet, basename='friendrequests')
 
 urlpatterns = [
-    path('', include(router.urls)), #include all the urls from the router
+    path('', include(router.urls)),
+    path('register/', RegisterView.as_view(), name='register'),
+    path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('user/', UserView.as_view(), name='user')
 ]
-
-
