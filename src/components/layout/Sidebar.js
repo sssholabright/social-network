@@ -44,13 +44,14 @@ export default function Sidebar() {
         <Box 
             as="nav" 
             pos="fixed"
+            top="60px"  // Adjusted to account for header height
             left="0"
             w={{ base: '60px', md: '200px' }}
             h="calc(100vh - 60px)"
             borderRight="1px solid"
             borderColor={borderColor}
             bg={bgColor}
-            overflow="auto"
+            overflowY="auto"
             css={{
                 '&::-webkit-scrollbar': {
                     width: '4px',
@@ -63,6 +64,7 @@ export default function Sidebar() {
                     borderRadius: '24px',
                 },
             }}
+            zIndex="sticky"
         >
             <VStack
                 spacing="1"
@@ -79,4 +81,3 @@ export default function Sidebar() {
         </Box>
     )
 }
-
