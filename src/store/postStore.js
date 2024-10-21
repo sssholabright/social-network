@@ -1,129 +1,135 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import api from '../services/api'
+import { auth, db, storage } from '../services/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { addDoc, arrayRemove, arrayUnion, collection, deleteDoc, doc, 
+    onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
 
-export const usePostStore = create(persist((set, get) => ({
+export const usePostStore = create((set, get) => ({
     posts: [],
-    hasMore: true,
-    page: 1,
     isLoading: false,
     error: null,
 
-
     fetchPosts: async () => {
-        const { page, isLoading } = get()
-        if (isLoading) return
-        set({ isLoading: true, error: null })
-
+        set({isLoading: true});
         try {
-            const newPosts = await api.getPosts(page)
-            console.log('Fetched posts:', newPosts); 
-            set((state) => ({
-                posts: [...state.posts, ...newPosts],
-                page: state.page + 1,
-                hasMore: newPosts.length > 0,
-                isLoading: false,
-            }));
+            const q = query(collection(db, 'posts'), orderBy('created_at', 'desc'));
+            onSnapshot(q, (querySnapshot) => {
+                const posts = querySnapshot.docs.map((doc) => ({
+                    id: doc.id, 
+                    ...doc.data(), 
+                    is_liked: doc.data().likes?.includes(auth.currentUser.uid)
+                }));
+                set({posts, isLoading: false});
+            });
+
         } catch (error) {
-            console.error('Error fetching posts:', error)
-            set({ error: error.message, isLoading: false })
+            console.error('Error fetching posts:', error);
+            set({error: error.message, isLoading: false});
         }
     },
-    
-    createPost: async (postData) => {
-        set({ isLoading: true, error: null })
 
+    createPost: async ({caption, image}) => {
+        set({isLoading: true});
         try {
-            const newPost = await api.createPost(postData)
-            set((state) => ({
-                posts: [newPost, ...state.posts],
-                isLoading: false,
-            }))
-            return newPost
+            let imageUrl = null;
+            if (image) {
+                const imageRef = ref(storage, `posts/${new Date().getTime()}`);
+                await uploadBytes(imageRef, image);
+                imageUrl = await getDownloadURL(imageRef);
+            }
+            
+            const newPost = {
+                user: auth.currentUser.uid,
+                caption,
+                image: imageUrl,
+                created_at: new Date(),
+                likes: [],
+                comments: [],
+            }
+
+            const docRef = await addDoc(collection(db, 'posts'), newPost);
+            set((state) => ({posts: [...state.posts, {...newPost, id: docRef.id}], isLoading: false}));
         } catch (error) {
-            console.error('Error creating post:', error)
-            set({ error: error.message, isLoading: false })
-            throw error
+            console.error('Error creating post:', error);
+            set({error: error.message, isLoading: false});
+        }
+    },
+
+    updatePost: async (postId, updatedPost) => {
+        set({isLoading: true});
+        try {
+            const postRef = doc(db, 'posts', postId);
+            await updateDoc(postRef, updatedPost);
+            set((state) => ({
+                posts: state.posts.map((post) => post.id === postId ? {...post, ...updatedPost} : post),
+                isLoading: false
+            }));
+        } catch (error) {
+            console.error('Error updating post:', error);
+            set({error: error.message, isLoading: false});
+        }
+    },
+
+    deletePost: async (postId) => {
+        set({isLoading: true});
+        try {
+            const postRef = doc(db, 'posts', postId);
+            await deleteDoc(postRef);
+            set((state) => ({
+                posts: state.posts.filter((post) => post.id !== postId),
+                isLoading: false
+            }));
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            set({error: error.message, isLoading: false});
+        }
+    },
+
+    commentOnPost: async (postId, comment) => {
+        console.log('Commenting on post:', postId, comment)
+        try {
+            const postRef = doc(db, 'posts', postId);
+            await updateDoc(postRef, {comments: arrayUnion(comment)});
+            set((state) => ({
+                posts: state.posts.map((post) => 
+                    post.id === postId ? {...post, comments: [...post.comments, comment]} : post
+                ),
+                isLoading: false
+            }));
+        } catch (error) {
+            console.error('Error commenting on post:', error);
         }
     },
 
     likePost: async (postId) => {
-        set((state) => ({
-            posts: state.posts.map((post) => 
-                post.id === postId ? { ...post, likes: post.likes + 1, isLiked: true } : post
-            ),
-        }))
-    
+        console.log('Liking post:', postId)
         try {
-            await api.likePost(postId)
-        } catch (error) {
-            console.error('Error liking post:', error)
+            const postRef = doc(db, 'posts', postId);
+            await updateDoc(postRef, {likes: arrayUnion(auth.currentUser.uid)});
             set((state) => ({
                 posts: state.posts.map((post) => 
-                    post.id === postId ? { ...post, likes: post.likes - 1, isLiked: false } : post
+                    post.id === postId ? {...post, is_liked: true} : post
                 ),
-                error: error.message,
-            }))
+                isLoading: false
+            }));
+        } catch (error) {
+            console.error('Error liking post:', error);
         }
     },
 
     unlikePost: async (postId) => {
-        // Optimistically update the UI
-        set((state) => ({
-            posts: state.posts.map((post) => 
-                post.id === postId ? { ...post, likes: post.likes - 1, isLiked: false } : post
-            ),
-        }))
-    
+        console.log('Unliking post:', postId)
         try {
-            await api.unlikePost(postId)
-        } catch (error) {
-            console.error('Error unliking post:', error)
-            // Revert the optimistic update
+            const postRef = doc(db, 'posts', postId);
+            await updateDoc(postRef, {likes: arrayRemove(auth.currentUser.uid)});
             set((state) => ({
                 posts: state.posts.map((post) => 
-                    post.id === postId ? { ...post, likes: post.likes + 1, isLiked: true } : post
+                    post.id === postId ? {...post, is_liked: false} : post
                 ),
-                error: error.message,
-            }))
-        }
-    },
-
-    commentPost: async (postId, commentData) => {
-        try {
-            const newComment = await api.commentPost(postId, commentData)
-            set((state) => ({
-                posts: state.posts.map((post) => 
-                    post.id === postId 
-                        ? { ...post, comments: [...post.comments, newComment] } 
-                        : post
-                ),
-            }))
-            return newComment
+                isLoading: false
+            }));
         } catch (error) {
-            console.error('Error commenting on post:', error)
-            set({ error: error.message, isLoading: false })
-            throw error
-        }
-    },
-
-    resetPosts: () => set({ posts: [], page: 1, hasMore: true, isLoading: false, error: null }),
-
-    // Add a method to fetch a single post if needed
-    fetchPost: async (postId) => {
-        set({ isLoading: true, error: null })
-
-        try {
-            const post = await api.getPost(postId)
-            set((state) => ({
-                posts: state.posts.some(p => p.id === postId) ? state.posts.map(p => p.id === postId ? post : p) : [post, ...state.posts],
-                isLoading: false,
-            }))
-            return post
-        } catch (error) {
-            console.error('Error fetching post:', error)
-            set({ error: error.message, isLoading: false })
-            throw error
+            console.error('Error unliking post:', error);
         }
     }
-}), { name: 'posts', storage: createJSONStorage(() => localStorage) }))
+}))

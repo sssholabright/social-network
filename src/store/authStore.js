@@ -1,60 +1,50 @@
-import { create } from 'zustand'
-import api from '../services/api'
+import { create } from 'zustand';
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth } from '../services/firebase';
 
-const useAuthStore = create((set) => ({
+export const useAuthStore = create((set) => ({
     user: null,
-    isLoading: true,
     isAuthenticated: false,
+    isLoading: false,
+    error: null,
 
     login: async (username, password) => {
+        set({ isLoading: true, error: null });
         try {
-            const user = await api.login(username, password);
-            set({ user, isAuthenticated: true, isLoading: false });
-            await api.getCurrentUser();  // Immediately check authentication
-            return user;
+            const userCredential = await signInWithEmailAndPassword(auth, username, password);
+            set({ user: userCredential.user, isAuthenticated: true, isLoading: false });
+            return true;
         } catch (error) {
-            set({ isLoading: false, error: error.message });
-            console.error('Login failed:', error);
-            throw error;
+            set({ error: error.message, isLoading: false });
+            return false;
         }
     },
-
-    register: async (username, password, email) => {
+    register: async (email, password) => {
+        set({ isLoading: true, error: null });
         try {
-            const user = await api.register(username, password, email)
-            set({ user, isAuthenticated: true, isLoading: false })
-            return user
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            set({ user: userCredential.user, isAuthenticated: true, isLoading: false });
+            return true;
         } catch (error) {
-            set({ isLoading: false, error: error.message })
-            console.error('Registration failed:', error)
-            throw error
+            set({ error: error.message, isLoading: false });
+            return false;
         }
     },
-
     logout: async () => {
+        set({ isLoading: true, error: null });
         try {
-            await api.logout()
-            set({ user: null, isAuthenticated: false })
+            await signOut(auth);
+            set({ user: null, isAuthenticated: false, isLoading: false, error: null });
+            return true;
         } catch (error) {
-            set({ error: error.message })
-            console.error('Logout failed:', error)
-            throw error
+            console.log("Logout error:", error);
+            set({ error: error.message, isLoading: false, user: null, isAuthenticated: false });
+            return false;
         }
     },
-
-    checkAuth: async () => {
-        set({ isLoading: true })
-        try {
-            const user = await api.getCurrentUser()
-            set({ user, isAuthenticated: true, isLoading: false })
-            console.log('Check auth Success:', user)
-            return user
-        } catch (error) {
-            set({ user: null, isAuthenticated: false, isLoading: false, error: error.message })
-            console.error('Authentication check failed:', error)
-            throw error
-        }
-    }
-}))
-
-export default useAuthStore
+    checkAuth: () => {
+        onAuthStateChanged(auth, (user) => {
+            set({ user, isAuthenticated: !!user, isLoading: false }); // !!user converts user to boolean
+        });
+    },
+}));

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import React from 'react'
 import { FiHome, FiLogOut, FiMessageSquare, FiSettings, FiUser, FiUsers } from 'react-icons/fi'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
 
 const MotionBox = motion(Box)
 
@@ -37,6 +38,7 @@ const MenuItem = ({ icon, label, to }) => {
 }
 
 export default function Sidebar() {
+    const { logout, user } = useAuthStore();
     const bgColor = useColorModeValue('white', 'gray.800')
     const borderColor = useColorModeValue('gray.200', 'gray.700')
 
@@ -72,11 +74,11 @@ export default function Sidebar() {
                 mt={4}
             >
                 <MenuItem icon={FiHome} label="Home" to="/" />
-                <MenuItem icon={FiUser} label="Profile" to="/profile" />
+                <MenuItem icon={FiUser} label="Profile" to={`/profile/${user?.uid}`} />
                 <MenuItem icon={FiUsers} label="Friends" to="/friends" />
                 <MenuItem icon={FiMessageSquare} label="Messages" to="/messages" />
                 <MenuItem icon={FiSettings} label="Settings" to="/settings" />
-                <MenuItem icon={FiLogOut} label="Logout" to="/logout" />
+                <MenuItem icon={FiLogOut} label="Logout" onClick={logout} />
             </VStack>
         </Box>
     )

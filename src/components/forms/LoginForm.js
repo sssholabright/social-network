@@ -1,22 +1,19 @@
 import { Box, Button, FormControl, FormLabel, Input, Link, Text, VStack } from '@chakra-ui/react'
 import React, { useState } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
+import { Link as RouterLink } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
 
 export default function LoginForm() {
-    const [username, setUsername] = useState('')
+    const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
-    const { login } = useAuth()
-    const navigate = useNavigate()
+    const { login } = useAuthStore()
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
-        
         try {
-            await login(username, password)
-            navigate('/')
+            await login(email, password)
         } catch (error) {
             setError(error.message)
         }
@@ -27,12 +24,12 @@ export default function LoginForm() {
             <form onSubmit={handleSubmit}>
                 <VStack spacing={4}>
                     <FormControl>
-                        <FormLabel>Username</FormLabel>
+                        <FormLabel>Email</FormLabel>
                         <Input
                             type="text" 
-                            name="username"
-                            value={username} 
-                            onChange={(e) => setUsername(e.target.value)} 
+                            name="email"
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)} 
                             required 
                         />
                     </FormControl>
@@ -46,7 +43,7 @@ export default function LoginForm() {
                             required 
                         />
                     </FormControl>
-                    {error && <Text color="red.500">{error}</Text>}
+                    {error && <Text color="red.500">{JSON.stringify(error)}</Text>}
                     <Button type="submit" colorScheme="blue" width="full">Login</Button>
                 </VStack>
             </form>

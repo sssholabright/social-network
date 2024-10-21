@@ -4,7 +4,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FiBell, FiMenu, FiMessageSquare, FiMoon, FiSearch, FiSun } from 'react-icons/fi'
 import { useNotifications } from '../../pages/Notifications'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuthStore } from '../../store/authStore'
+import { auth } from '../../services/firebase'
 
 const MotionBox = motion(Box)
 
@@ -12,7 +13,8 @@ export default function Header() {
     const location = useLocation()
     const { colorMode, toggleColorMode } = useColorMode()
     const [isSearchFocused, setIsSearchFocused] = useState(false)
-    const { user, logout } = useAuth()
+    const { logout } = useAuthStore()
+    const user = auth.currentUser
     const { notifications } = useNotifications();
 
     const unreadNotifications = notifications.filter(n => !n.read).length;
@@ -59,17 +61,17 @@ export default function Header() {
                     <InputGroup maxW="400px" mx={4}>
                         <InputLeftElement pointerEvents="none">
                             <FiSearch color="gray.300" />
-                    </InputLeftElement>
-                    <Input 
-                        type="text" 
-                        placeholder="Search..." 
-                        onFocus={() => setIsSearchFocused(true)} 
-                        onBlur={() => setIsSearchFocused(false)} 
-                        borderColor={isSearchFocused ? 'blue.500' : borderColor}
-                        _hover={{
-                            borderColor: 'blue.500',
-                        }}
-                        transition="all 0.2s"
+                        </InputLeftElement>
+                        <Input 
+                            type="text" 
+                            placeholder="Search..." 
+                            onFocus={() => setIsSearchFocused(true)} 
+                            onBlur={() => setIsSearchFocused(false)} 
+                            borderColor={isSearchFocused ? 'blue.500' : borderColor}
+                            _hover={{
+                                borderColor: 'blue.500',
+                            }}
+                            transition="all 0.2s"
                         />
                     </InputGroup>
                 ) : null}
@@ -112,8 +114,8 @@ export default function Header() {
                                     <VStack align="stretch" p={2}>
                                         {notifications.slice(0, 5).map((notification) => (
                                     <Box key={notification.id} p={2} _hover={{ bg: 'gray.100' }}>
-                                        <Text fontSize="sm">{notification.message}</Text>
-                                    </Box>
+                                                <Text fontSize="sm">{notification.message}</Text>
+                                            </Box>
                                         ))}
                                     </VStack>
                                 </PopoverContent>
@@ -140,11 +142,11 @@ export default function Header() {
                             p={0}
                             m={0}
                         >
-                            <Avatar size="sm" name={user?.name} src={user?.profileimg || 'https://bit.ly/dan-abramov'} />
+                            <Avatar size="sm" name={user?.displayName} src={user?.photoURL || 'https://bit.ly/dan-abramov'} />
                         </MenuButton>
                         {user ? (
                             <MenuList>
-                                <MenuItem as={Link} to="/profile">Profile</MenuItem>
+                                <MenuItem as={Link} to={`/profile/${user?.uid}`}>Profile</MenuItem>
                                 <MenuItem as={Link} to="/settings">Settings</MenuItem>
                                 <MenuItem onClick={logout}>Logout</MenuItem>
                             </MenuList>
@@ -155,8 +157,8 @@ export default function Header() {
                         onClick={onOpen}
                         icon={<FiMenu />}
                         aria-label="Open menu"
-                            ml={2}
-                        />
+                        ml={2}
+                    />
                 </Flex>
             </Flex>
 
@@ -168,7 +170,7 @@ export default function Header() {
                     <DrawerBody>
                         <VStack align="stretch">
                             <Button as={Link} to="/" onClick={onClose}>Home</Button>
-                            <Button as={Link} to="/profile" onClick={onClose}>Profile</Button>
+                            <Button as={Link} to={`/profile/${user?.uid}`} onClick={onClose}>Profile</Button>
                             <Button as={Link} to="/messages" onClick={onClose}>Messages</Button>
                             <Button as={Link} to="/settings" onClick={onClose}>Settings</Button>
                             <Button onClick={logout}>Logout</Button>

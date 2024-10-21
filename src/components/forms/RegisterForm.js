@@ -1,24 +1,37 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Link } from '@chakra-ui/react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../store/authStore';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../../services/firebase';
 
 export default function RegisterForm() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-  const {register} = useAuth()
+  const [errors, setErrors] = useState({});
+  const { register, error } = useAuthStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setErrors({});
     try {
-      await register(username, email, password);
-      navigate('/');
+      const user = await register(email, password);
+      if (user) {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), {
+          uid: auth.currentUser.uid,
+          username: username,
+          email: email, 
+          profilePicture: null,
+          bio: '',
+          followers: [],
+          following: [],
+        });
+        console.log('user saved');
+      }
     } catch (err) {
-      setError('Failed to register. Please try again.');
+      console.error('RegisterForm error', err);
+      setErrors({ error: err.message });
     }
   };
 
@@ -33,6 +46,7 @@ export default function RegisterForm() {
               onChange={(e) => setUsername(e.target.value)} 
               required 
             />
+            {errors.username && <Text color="red.500">{errors.username}</Text>}
           </FormControl>
           <FormControl>
             <FormLabel>Email</FormLabel>
@@ -42,6 +56,7 @@ export default function RegisterForm() {
               onChange={(e) => setEmail(e.target.value)} 
               required 
             />
+            {errors.email && <Text color="red.500">{errors.email}</Text>}
           </FormControl>
           <FormControl>
             <FormLabel>Password</FormLabel>
@@ -51,6 +66,7 @@ export default function RegisterForm() {
               onChange={(e) => setPassword(e.target.value)} 
               required 
             />
+            {errors.password && <Text color="red.500">{errors.password}</Text>}
           </FormControl>
           {error && <Text color="red.500">{error}</Text>}
           <Button type="submit" colorScheme="blue" width="full">Register</Button>
