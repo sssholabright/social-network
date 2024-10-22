@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Box, HStack, Avatar, VStack, Text, IconButton, Image, Button, Textarea, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Menu, MenuButton, MenuList, MenuItem, useToast, Collapse } from '@chakra-ui/react'
 import { usePostStore } from '../../store/postStore'
 import { useAuthStore } from '../../store/authStore'
-import { format } from 'date-fns'
 import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisV, FaEdit, FaTrash } from 'react-icons/fa'
 import { motion, AnimatePresence } from 'framer-motion'
 

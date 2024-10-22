@@ -12,6 +12,7 @@ import Profile from './pages/Profile'
 import { useAuthStore } from './store/authStore'
 import Friends from './pages/Friends'
 import Messages from './pages/Messages'
+import Notifications from './pages/Notifications'
 
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -81,6 +82,12 @@ export default function App() {
                       <Messages />
                     </PrivateRoute>
                   } />
+                  <Route path="/notifications" element={
+                    <PrivateRoute>
+                      <Notifications />
+                    </PrivateRoute>
+                  } />
+                  
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               </Box>

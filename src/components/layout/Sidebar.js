@@ -1,7 +1,7 @@
 import { Box, Icon, Text, Tooltip, useColorModeValue, VStack } from '@chakra-ui/react'
 import { motion } from 'framer-motion'
 import React from 'react'
-import { FiHome, FiLogOut, FiMessageSquare, FiSettings, FiUser, FiUsers } from 'react-icons/fi'
+import { FiBell, FiHome, FiLogOut, FiMessageSquare, FiSettings, FiUser, FiUsers } from 'react-icons/fi'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
@@ -77,6 +77,7 @@ export default function Sidebar() {
                 <MenuItem icon={FiUser} label="Profile" to={`/profile/${user?.uid}`} />
                 <MenuItem icon={FiUsers} label="Friends" to="/friends" />
                 <MenuItem icon={FiMessageSquare} label="Messages" to="/messages" />
+                <MenuItem icon={FiBell} label="Notifications" to="/notifications" />
                 <MenuItem icon={FiSettings} label="Settings" to="/settings" />
                 <MenuItem icon={FiLogOut} label="Logout" onClick={logout} />
             </VStack>

@@ -1,19 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { Box, HStack, VStack, Avatar, Text, Heading, Button, useToast, Spinner, Tabs, TabList, Tab, TabPanels, TabPanel, Grid, Stat, StatLabel, StatNumber, Divider, useColorModeValue, Image } from '@chakra-ui/react';
-import PostCard from '../components/common/PostCard';
-import EditProfileModal from '../components/common/EditProfileModal';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Box, HStack, VStack, Avatar, Text, Heading, Button, useToast, Spinner, Tabs, TabList, Tab, TabPanels, TabPanel, SimpleGrid, Stat, StatLabel, StatNumber, Divider, useColorModeValue, Image, Container, Flex, useDisclosure } from '@chakra-ui/react';
+import { FaUserFriends, FaImage, FaBookmark, FaEdit, FaUserPlus, FaUserMinus } from 'react-icons/fa';
 import { useProfileStore } from '../store/userStore';
 import { useAuthStore } from '../store/authStore';
+import { useFriendStore } from '../store/friendStore';
 import { useParams, Link } from 'react-router-dom';
-import { FaUserFriends, FaImage, FaBookmark } from 'react-icons/fa';
 import { usePostStore } from '../store/postStore';
+import EditProfileModal from '../components/common/EditProfileModal';
+import PostModal from '../components/common/PostModal';
 
 export default function Profile() {
     const { userId } = useParams();
     const { profile, isLoading, error, fetchProfile, updateProfile } = useProfileStore();
     const { posts, isLoading: postsLoading, error: postsError, fetchPosts } = usePostStore();
     const { user, isLoading: authLoading } = useAuthStore();
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const { friends, sendFriendRequest, removeFriend, fetchFriends } = useFriendStore();
+    const { isOpen: isEditModalOpen, onOpen: onEditModalOpen, onClose: onEditModalClose } = useDisclosure();
+    const { isOpen: isPostModalOpen, onOpen: onPostModalOpen, onClose: onPostModalClose } = useDisclosure();
+    const [selectedPost, setSelectedPost] = useState(null);
     const toast = useToast();
     const bgColor = useColorModeValue('white', 'gray.800');
     const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -22,15 +26,14 @@ export default function Profile() {
         if (userId && userId !== 'undefined') {
             fetchProfile(userId);
             fetchPosts(userId);
+            fetchFriends(userId);
         }
-    }, [userId, fetchProfile, fetchPosts]);
-
-
+    }, [userId, fetchProfile, fetchPosts, fetchFriends]);
 
     const handleEditProfile = async (updatedProfile) => {
         try {
             await updateProfile(userId, updatedProfile);
-            setIsEditModalOpen(false);
+            onEditModalClose();
             toast({
                 title: 'Profile updated',
                 description: 'Your profile has been updated successfully',
@@ -49,44 +52,90 @@ export default function Profile() {
         }
     };
 
-    if (isLoading || authLoading) return <Spinner size="xl" />
+    const handleFriendAction = useCallback(async () => {
+        if (!user) return;
+        try {
+            if (friends.some(friend => friend.friendId === userId)) {
+                await removeFriend(user.uid, userId);
+                toast({
+                    title: 'Friend removed',
+                    status: 'info',
+                    duration: 3000,
+                    isClosable: true,
+                });
+            } else {
+                await sendFriendRequest(user.uid, userId, profile.username);
+                toast({
+                    title: 'Friend request sent',
+                    status: 'success',
+                    duration: 3000,
+                    isClosable: true,
+                });
+            }
+            fetchFriends(user.uid);
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: error.message,
+                status: 'error',
+                duration: 3000,
+                isClosable: true,
+            });
+        }
+    }, [user, userId, profile, friends, removeFriend, sendFriendRequest, fetchFriends, toast]);
+
+    const openPostModal = (post) => {
+        setSelectedPost(post);
+        onPostModalOpen();
+    };
+
+    if (isLoading || authLoading || postsLoading) return <Spinner size="xl" />
     if (error) return <Text>Error: {error.message || JSON.stringify(error)}</Text>
     if (!profile) return <Text>Profile not found</Text>
     if (postsError) return <Text>Error: {postsError.message || JSON.stringify(postsError)}</Text>
-    if (postsLoading) return <Spinner size="xl" />
-
 
     return (
-        <Box maxW="1000px" margin="0 auto" p={4}>
+        <Container maxW="container.xl" py={8}>
             <VStack spacing={8} align="stretch">
                 <Box bg={bgColor} borderRadius="lg" p={6} boxShadow="md" borderWidth={1} borderColor={borderColor}>
-                    <HStack spacing={8} align="start">
-                        <Avatar size="2xl" name={profile.username} src={profile.profile_picture} />
-                        <VStack spacing={4} align="start" flex={1}>
-                            <HStack justify="space-between" width="100%">
+                    <Flex direction={{ base: 'column', md: 'row' }} align="start" justify="space-between">
+                        <HStack spacing={8} align="start" mb={{ base: 4, md: 0 }}>
+                            <Avatar size="2xl" name={profile.username} src={profile.profile_picture} />
+                            <VStack spacing={4} align="start">
                                 <Heading as="h1" size="xl">{profile.username}</Heading>
-                                {user && user.uid === profile.uid && (
-                                    <Button onClick={() => setIsEditModalOpen(true)} colorScheme="blue">Edit Profile</Button>
-                                )}
-                            </HStack>
-                            <Text fontSize="lg" color="gray.500">@{profile.username}</Text>
-                            <Text fontSize="md">{profile.bio}</Text>
-                            <HStack spacing={8}>
-                                <Stat>
-                                    <StatLabel>Posts</StatLabel>
-                                    <StatNumber>{posts.filter(post => post.user === userId).length || 0}</StatNumber>
-                                </Stat>
-                                <Stat>
-                                    <StatLabel>Followers</StatLabel>
-                                    <StatNumber>{profile.followers?.length || 0}</StatNumber>
-                                </Stat>
-                                <Stat>
-                                    <StatLabel>Following</StatLabel>
-                                    <StatNumber>{profile.following?.length || 0}</StatNumber>
-                                </Stat>
-                            </HStack>
+                                <Text fontSize="lg" color="gray.500">@{profile.username}</Text>
+                                <Text fontSize="md">{profile.bio}</Text>
+                            </VStack>
+                        </HStack>
+                        <VStack>
+                            {user && user.uid === profile.uid ? (
+                                <Button leftIcon={<FaEdit />} onClick={onEditModalOpen} colorScheme="blue">Edit Profile</Button>
+                            ) : (
+                                <Button
+                                    leftIcon={friends.some(friend => friend.friendId === userId) ? <FaUserMinus /> : <FaUserPlus />}
+                                    onClick={handleFriendAction}
+                                    colorScheme={friends.some(friend => friend.friendId === userId) ? "red" : "green"}
+                                >
+                                    {friends.some(friend => friend.friendId === userId) ? "Remove Friend" : "Add Friend"}
+                                </Button>
+                            )}
                         </VStack>
-                    </HStack>
+                    </Flex>
+                    <Divider my={6} />
+                    <Flex justify="space-around" wrap="wrap">
+                        <Stat textAlign="center">
+                            <StatLabel>Posts</StatLabel>
+                            <StatNumber>{posts.filter(post => post.user === userId).length || 0}</StatNumber>
+                        </Stat>
+                        <Stat textAlign="center">
+                            <StatLabel>Followers</StatLabel>
+                            <StatNumber>{profile.followers?.length || 0}</StatNumber>
+                        </Stat>
+                        <Stat textAlign="center">
+                            <StatLabel>Following</StatLabel>
+                            <StatNumber>{profile.following?.length || 0}</StatNumber>
+                        </Stat>
+                    </Flex>
                 </Box>
 
                 <Tabs isFitted variant="enclosed">
@@ -97,16 +146,26 @@ export default function Profile() {
                     </TabList>
                     <TabPanels>
                         <TabPanel>
-                            <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-                                {profile.posts && profile.posts.map((post) => (
-                                    <Box key={post.id} as={Link} to={`/post/${post.id}`}>
-                                        <Image src={post.image} alt={post.caption} objectFit="cover" w="100%" h="200px" />
+                            <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
+                                {posts.filter(post => post.user === userId).map((post) => (
+                                    <Box key={post.id} onClick={() => openPostModal(post)} cursor="pointer">
+                                        <Image src={post.image} alt={post.caption} objectFit="cover" w="100%" h="200px" borderRadius="md" />
                                     </Box>
                                 ))}
-                            </Grid>
+                            </SimpleGrid>
                         </TabPanel>
                         <TabPanel>
-                            <Text>Friends list coming soon...</Text>
+                            <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
+                                {friends.map((friend) => (
+                                    <Box key={friend.id} p={4} borderWidth={1} borderRadius="lg" borderColor={borderColor}>
+                                        <VStack>
+                                            <Avatar size="lg" name={friend.username} src={friend.profilePicture} />
+                                            <Text fontWeight="bold">{friend.username}</Text>
+                                            <Button as={Link} to={`/profile/${friend.friendId}`} size="sm" colorScheme="blue">View Profile</Button>
+                                        </VStack>
+                                    </Box>
+                                ))}
+                            </SimpleGrid>
                         </TabPanel>
                         <TabPanel>
                             <Text>Saved posts coming soon...</Text>
@@ -115,14 +174,18 @@ export default function Profile() {
                 </Tabs>
             </VStack>
             
-            {isEditModalOpen && (
-                <EditProfileModal
-                    isOpen={isEditModalOpen}
-                    onClose={() => setIsEditModalOpen(false)}
-                    onSubmit={handleEditProfile}
-                    initialProfile={profile}
-                />
-            )}
-        </Box>
-    )
+            <EditProfileModal
+                isOpen={isEditModalOpen}
+                onClose={onEditModalClose}
+                onSubmit={handleEditProfile}
+                initialProfile={profile}
+            />
+
+            <PostModal
+                isOpen={isPostModalOpen}
+                onClose={onPostModalClose}
+                post={selectedPost}
+            />
+        </Container>
+    );
 }

@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
-import { Box, Flex, Text, Button, useColorMode, useColorModeValue, InputGroup, InputLeftElement, Input, IconButton, Menu, MenuButton, Avatar, MenuList, MenuItem, useDisclosure, Popover, PopoverTrigger, Badge, PopoverContent, VStack, Drawer, DrawerOverlay, DrawerContent, DrawerCloseButton, DrawerHeader, DrawerBody } from '@chakra-ui/react'
+import { Box, Flex, Text, Button, useColorMode, useColorModeValue, InputGroup, InputLeftElement, Input, IconButton, Menu, MenuButton, Avatar, MenuList, MenuItem, useDisclosure, Popover, PopoverTrigger, PopoverContent, VStack, Drawer, DrawerOverlay, DrawerContent, DrawerCloseButton, DrawerHeader, DrawerBody } from '@chakra-ui/react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FiBell, FiMenu, FiMessageSquare, FiMoon, FiSearch, FiSun } from 'react-icons/fi'
-import { useNotifications } from '../../pages/Notifications'
+//import { useNotifications } from '../../pages/Notifications'
 import { useAuthStore } from '../../store/authStore'
 import { auth } from '../../services/firebase'
 
@@ -15,9 +15,9 @@ export default function Header() {
     const [isSearchFocused, setIsSearchFocused] = useState(false)
     const { logout } = useAuthStore()
     const user = auth.currentUser
-    const { notifications } = useNotifications();
+   // const notifications=null  //= ///useNotifications();
 
-    const unreadNotifications = notifications.filter(n => !n.read).length;
+    // const unreadNotifications = notifications.filter(n => !n.read).length;
 
     const { isOpen, onOpen, onClose } = useDisclosure()
 
@@ -95,7 +95,7 @@ export default function Header() {
                                         aria-label="Notifications"
                                         position="relative"
                                     >
-                                        {unreadNotifications > 0 && (
+                                        {/* {unreadNotifications > 0 && (
                                             <Badge
                                                 position="absolute"
                                                 top="-1"
@@ -107,16 +107,16 @@ export default function Header() {
                                             >
                                                 {unreadNotifications}
                                             </Badge>
-                                    )}
+                                    )} */}
                                 </IconButton>
                                 </PopoverTrigger>
                                 <PopoverContent>
                                     <VStack align="stretch" p={2}>
-                                        {notifications.slice(0, 5).map((notification) => (
+                                        {/* {notifications.slice(0, 5).map((notification) => (
                                     <Box key={notification.id} p={2} _hover={{ bg: 'gray.100' }}>
                                                 <Text fontSize="sm">{notification.message}</Text>
                                             </Box>
-                                        ))}
+                                        ))} */}
                                     </VStack>
                                 </PopoverContent>
                             </Popover>

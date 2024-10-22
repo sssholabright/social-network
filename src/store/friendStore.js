@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { create } from 'zustand';
 import { db } from '../services/firebase';
 
@@ -23,6 +23,21 @@ export const useFriendStore = create((set, get) => ({
         } catch (error) {
             console.error("Error fetching friends", error);
             set({error: error.message, isLoading: false});
+        }
+    },
+
+    fetchFriendsProfile: async (friendId) => {
+        try {
+            const userDoc = await getDoc(doc(db, 'users', friendId));
+            if (userDoc.exists()) {
+                return userDoc.data();
+            } else {
+                console.error("Friend profile not found");
+                return null;
+            }
+        } catch (error) {
+            console.error("Error fetching friend profile", error);
+            return null;
         }
     },
 
@@ -173,6 +188,25 @@ export const useFriendStore = create((set, get) => ({
         } catch (error) {
             console.error("Error removing friend", error);
             set({error: error.message, isLoading: false});
+        }
+    },
+
+    fetchFriendProfiles: async (friendIds) => {
+        try {
+            const friendProfiles = await Promise.all(
+                friendIds.map(async (friendId) => {
+                    const docRef = doc(db, 'users', friendId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        return { id: docSnap.id, ...docSnap.data() };
+                    }
+                    return null;
+                })
+            );
+            return friendProfiles.filter(profile => profile !== null);
+        } catch (error) {
+            console.error('Error fetching friend profiles:', error);
+            throw error;
         }
     },
 }))
